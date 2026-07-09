@@ -46,7 +46,7 @@
 #include "TInterruptManager.h"
 #include "Files/TFileManager.h"
 #include "JIT/JIT.h"
-#include "JIT/TJITPerformance.h"
+#include "JIT/TJITStatistics.h"
 #include "Log/TLog.h"
 #include "Monitor/TMonitor.h"
 #include "Network/TNetworkManager.h"
@@ -87,9 +87,8 @@ TEmulator::TEmulator(
 		mLog(inLog)
 {
 	mInterruptManager = new TInterruptManager(inLog, &mProcessor);
-#ifdef JIT_PERFORMANCE
-	branchDestCount.SetEmulator(this);
-	branchLinkDestCount.SetEmulator(this);
+#ifdef JIT_ENABLE_STATISTICS
+	gJITStatistics.SetEmulator(this);
 #endif
 	mDMAManager = new TDMAManager(inLog, this, &mMemory, mInterruptManager);
 	mPlatformManager = new TPlatformManager(inLog, inScreenManager);
@@ -133,9 +132,8 @@ TEmulator::TEmulator(
 		mLog(inLog)
 {
 	mInterruptManager = new TInterruptManager(inLog, &mProcessor);
-#ifdef JIT_PERFORMANCE
-	branchDestCount.SetEmulator(this);
-	branchLinkDestCount.SetEmulator(this);
+#ifdef JIT_ENABLE_STATISTICS
+	gJITStatistics.SetEmulator(this);
 #endif
 	mDMAManager = new TDMAManager(inLog, this, &mMemory, mInterruptManager);
 	mPlatformManager = new TPlatformManager(inLog, nil);

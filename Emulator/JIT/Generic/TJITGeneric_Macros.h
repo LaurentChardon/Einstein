@@ -146,12 +146,6 @@
 	}
 */
 
-#ifdef JIT_PERFORMANCE
-#define COUNTHIT(counter, address) counter.hit(address);
-#else
-#define COUNTHIT(counter, address)
-#endif
-
 // -------------------------------------------------------------------------- //
 //  * GetShift( TARMProcessor*, KUInt32, Boolean* )
 // -------------------------------------------------------------------------- //

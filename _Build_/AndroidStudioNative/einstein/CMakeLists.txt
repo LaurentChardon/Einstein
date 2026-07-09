@@ -52,7 +52,7 @@ SET (SourceFiles
 		# Just In Time Compiler and Emulator of ARM CPU
 		${LOCAL_PATH}/Emulator/JIT/TJITCache.cpp
 		${LOCAL_PATH}/Emulator/JIT/TJITPage.cpp
-		${LOCAL_PATH}/Emulator/JIT/TJITPerformance.cpp
+		${LOCAL_PATH}/Emulator/JIT/TJITStatistics.cpp
 		# EMulating ARM with "C" Code
 		${LOCAL_PATH}/Emulator/JIT/Generic/TJITGeneric.cpp
 		${LOCAL_PATH}/Emulator/JIT/Generic/TJITGeneric_BlockDataTransfer.cpp

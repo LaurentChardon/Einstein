@@ -880,9 +880,9 @@ TFLApp::UserActionSnapScreen()
 {
 	static std::string prev_filename;
 	const char* filename = ChooseNewFile(
-										 "Save Snapshot to PNG Image File",
-										 "PNG Image\t*.png",
-										 prev_filename.c_str());
+		"Save Snapshot to PNG Image File",
+		"PNG Image\t*.png",
+		prev_filename.c_str());
 	if (!filename)
 		return;
 	prev_filename = filename;

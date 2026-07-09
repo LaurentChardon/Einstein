@@ -1110,7 +1110,7 @@ public:
 			if (errno == EINPROGRESS)
 #endif
 			{
-				struct timeval timeout = {};
+				struct timeval timeout = { };
 				timeout.tv_sec = 10;
 				timeout.tv_usec = 0;
 				fd_set set;
@@ -1629,7 +1629,7 @@ public:
 	KUInt16 theirID = 2000;
 	int mSocket = INVALID_SOCKET;
 	KUInt32 mExpire = 0;
-	struct sockaddr_in theirSockAddr = {};
+	struct sockaddr_in theirSockAddr = { };
 };
 
 /**

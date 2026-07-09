@@ -377,7 +377,6 @@ if ( ${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" )
 	)
 	if ( EINSTEIN_FLTK_FRONTEND )
 		target_link_libraries ( Einstein
-			fltk::fltk fltk::images fltk::png fltk::z
 			EinsteinFLGUI
 		)
 	endif ()

@@ -30,8 +30,8 @@
 #include "TJITCache.h"
 
 // C++
-#include <string>
 #include <atomic>
+#include <string>
 
 class TMemory;
 class TMMU;

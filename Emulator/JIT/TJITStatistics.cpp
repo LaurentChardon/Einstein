@@ -1,13 +1,13 @@
 // ==============================
-// File:			JITPerformance.cp
+// File:			JITStatistics.cpp
 // Project:			Einstein
 //
-// Copyright 2003-2007 by Paul Guyot (pguyot@kallisys.net).
+// Copyright 2003-2026 by Paul Guyot (pguyot@kallisys.net).
 //                     and Matthias Melcher (m.melcher@robowerk.com)
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
+// the Free Software Foundation, either version 2 of the License, or
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
@@ -22,7 +22,9 @@
 // $Id$
 // ==============================
 
-#include "TJITPerformance.h"
+#include "TJITStatistics.h"
+
+#ifdef JIT_ENABLE_STATISTICS
 
 #include "Emulator/TEmulator.h"
 #include "Emulator/TInterruptManager.h"
@@ -36,192 +38,65 @@
 #include <chrono>
 #include <thread>
 
-#ifdef JIT_PERFORMANCE
+TJITStatistics gJITStatistics;
 
-TJITPerfHitCounter branchDestCount(0, 8 * 1024 * 1024 - 1, 4);
-
-TJITPerfHitCounter branchLinkDestCount(0, 8 * 1024 * 1024 - 1, 4);
-;
-
+void
+TJITStatistics::write_all()
+{
+#ifdef JIT_STATISTIC_EXEC_COUNT
+	write_exec_count();
 #endif
+#ifdef JIT_STATISTIC_EXEC_ORDER
+	write_exec_order();
+#endif
+}
 
-TJITPerfHitCounter::TJITPerfHitCounter(KUInt32 first, KUInt32 last, KUInt32 step)
+void
+TJITStatistics::hit(KUInt32 at)
 {
-	mFirst = first;
-	switch (step)
+	(void) at;
+	KUInt32 index = at >> 2;
+	(void) index;
+#ifdef JIT_STATISTIC_EXEC_COUNT
+	if (index < k8MBWords)
 	{
-		case 2:
-			mShift = 1;
-			break;
-		case 4:
-			mShift = 2;
-			break;
-		default:
-			mShift = 0;
-			break;
+		uint64_t& count = mExecCount[index];
+		if (count < 0xffffffffffffffffULL)
+			count++;
 	}
-	mSize = (last + 1 - first) >> mShift;
-	mArray = new KUInt64[mSize];
-}
-
-TJITPerfHitCounter::~TJITPerfHitCounter()
-{
-	delete[] mArray;
-}
-
-void
-TJITPerfHitCounter::SetEmulator(TEmulator* inEmulator)
-{
-	mEmulator = inEmulator;
-}
-
-KUInt64
-TJITPerfHitCounter::get_hits(KUInt32 at)
-{
-	at = (at - mFirst) >> mShift;
-	if (at > mSize)
-		return 0;
-	return mArray[at];
-}
-
-void
-TJITPerfHitCounter::printOneHit(FILE* out, KUInt32 style, TSymbolList* inSymbols, KUInt32 addr, KUInt64 count)
-{
-	char symbol[512];
-	char comment[80];
-	int offset;
-	Boolean exactSymbol = false;
-
-	if (count > 0 || !(style & kStyleNonZeroOnly))
+#endif
+#ifdef JIT_STATISTIC_EXEC_ORDER
+	if (index < k8MBWords)
 	{
-		if (inSymbols != NULL)
-			exactSymbol = inSymbols->GetSymbolByAddress(addr, symbol, comment, &offset);
-		if (exactSymbol)
-		{
-			fprintf(out, "%s\t%19llu\n", symbol, (long long unsigned) count);
-		} else if ((style & kStyleSymbolsOnly) == 0)
-		{
-			if (style & kStyleHex)
-			{
-				fprintf(out, "%08X: ", (unsigned int) addr);
-			} else
-			{
-				fprintf(out, "%8d: ", (unsigned int) addr);
-			}
-			fprintf(out, "%19llu\n", (long long unsigned) count);
-		}
+		uint32_t& order = mExecOrder[index];
+		if (order == 0)
+			order = mExecOrderIndex++;
 	}
+#endif
 }
 
-//	kStyleAToB = 0,	///< show all values from a to b; varargs are UInt32 a, UInt32 b
-//	kStyleMostHit,	///< show the first n addresses that were hit most often; varargs is UInt32 n
-//	kStyleHex = 0x10000000 ///< show addresse in 8 byte hex notation instead of decimal
-
+#ifdef JIT_STATISTIC_EXEC_COUNT
 void
-TJITPerfHitCounter::print(FILE* out, KUInt32 style, TSymbolList* inSymbols, ...)
+TJITStatistics::write_exec_count()
 {
+	FILE* out = fopen(JIT_STATISTICS_PATH "exec_count.bin", "wb");
 	if (!out)
 		return;
-
-	if (mEmulator)
-	{
-		mEmulator->PauseSystem();
-		mEmulator->GetInterruptManager()->SuspendTimer();
-		std::this_thread::sleep_for(std::chrono::microseconds(1000000));
-	}
-
-	va_list vl;
-	va_start(vl, inSymbols);
-	static KUInt64 maxULLInt = 0xffffffffffffffffULL;
-	KUInt32 a, b, i, j, n = 0, o, ix;
-	KUInt64 m = 0;
-
-	// TInterruptManager;;blockEmulatorThread();
-	fprintf(out, "----- statistics ----\n");
-
-	switch (style & 0x0000ffff)
-	{
-		case kStyleDontSort:
-			a = 0;
-			b = 0x00800000;
-			goto AToB;
-		case kStyleAToB:
-			a = va_arg(vl, KUInt32);
-			b = va_arg(vl, KUInt32);
-		AToB:
-			o = a;
-			a = (a - mFirst) >> mShift; // TODO: check bounds
-			b = (b - mFirst) >> mShift;
-			for (i = a; i < b; i++)
-			{
-				KUInt64 v = mArray[i];
-				printOneHit(out, style, inSymbols, (i << mShift) + o, v);
-			}
-			break;
-		case kStyleAllHit:
-			for (j = 0; j < mSize; j++)
-			{
-				KUInt64 v = mArray[j];
-				if (v > 0)
-				{
-					printOneHit(out, style, inSymbols, (j << mShift) + mFirst, m);
-				}
-			}
-		case kStyleMostHit:
-			// TODO: using an insanely slow and destructive method to sort
-			if ((style & 0x0000ffff) == kStyleMostHit)
-				n = va_arg(vl, KUInt32);
-			else
-				n = mSize;
-			o = 0;
-			m = 0;
-			for (i = 0; i < mSize; i++)
-			{
-				if (mArray[i] > 0)
-				{
-					o++;
-					m += mArray[i];
-				}
-			}
-			fprintf(out, "%ld of %li memory addresses in %lld cycles executed.\n", (unsigned long) o, (unsigned long) mSize, (long long unsigned) m);
-			for (i = 0; i < n; i++)
-			{
-				m = 0;
-				ix = 0;
-				for (j = 0; j < mSize; j++)
-				{
-					KUInt64 v = mArray[j];
-					if (v == maxULLInt)
-						continue;
-					if (v > m)
-					{
-						m = v;
-						ix = j;
-					}
-				}
-				if (m == 0)
-					break;
-				mArray[ix] = maxULLInt;
-				printOneHit(out, style, inSymbols, (ix << mShift) + mFirst, m);
-			}
-			break;
-	}
-	va_end(vl);
-
-	if (mEmulator)
-	{
-		mEmulator->GetInterruptManager()->ResumeTimer();
-		mEmulator->Run();
-	}
+	fwrite(mExecCount, sizeof(uint64_t), k8MBWords, out);
+	fclose(out);
 }
+#endif // JIT_STATISTIC_EXEC_COUNT
 
+#ifdef JIT_STATISTIC_EXEC_ORDER
 void
-TJITPerfHitCounter::hit(KUInt32 at)
+TJITStatistics::write_exec_order()
 {
-	static KUInt64 maxULLInt = 0xffffffffffffffffULL;
-	at = (at - mFirst) >> mShift;
-	if (at > mSize)
+	FILE* out = fopen(JIT_STATISTICS_PATH "exec_order.bin", "wb");
+	if (!out)
 		return;
-	if (mArray[at] < maxULLInt)
-		mArray[at]++;
+	fwrite(mExecOrder, sizeof(uint32_t), k8MBWords, out);
+	fclose(out);
 }
+#endif // JIT_STATISTIC_EXEC_ORDER
+
+#endif // JIT_ENABLE_STATISTICS

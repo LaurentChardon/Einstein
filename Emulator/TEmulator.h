@@ -25,8 +25,8 @@
 #define _TEMULATOR_H
 
 #include <K/Defines/KDefinitions.h>
-#include <functional>
 #include <atomic>
+#include <functional>
 
 // Einstein
 #include "Emulator/TARMProcessor.h"

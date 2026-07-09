@@ -58,10 +58,6 @@
 #include "TCocoaFileManager.h"
 #import "TCocoaUserDefaults.h"
 
-#ifdef JIT_PERFORMANCE
-#include "Emulator/JIT/TJITPerformance.h"
-#endif
-
 // -------------------------------------------------------------------------- //
 // Constantes
 // -------------------------------------------------------------------------- //
@@ -549,18 +545,6 @@ TCocoaAppController ()
 - (IBAction)backlightButton:(id)sender
 {
 	mPlatformManager->SendBacklightEvent();
-#ifdef JIT_PERFORMANCE
-	// branchDestCount currently holds all commands that are executed.
-	FILE* f;
-	f = fopen("/tmp/p1.txt", "wb");
-	// branchDestCount.print(f, TJITPerfHitCounter::kStyleMostHit|TJITPerfHitCounter::kStyleHex, mSymbolList, 1000);
-	// branchDestCount.print(f, TJITPerfHitCounter::kStyleAllHit|TJITPerfHitCounter::kStyleHex, mSymbolList);
-	branchDestCount.print(f, TJITPerfHitCounter::kStyleNonZeroOnly | TJITPerfHitCounter::kStyleSymbolsOnly | TJITPerfHitCounter::kStyleDontSort | TJITPerfHitCounter::kStyleHex, mSymbolList);
-	fclose(f);
-	// f = fopen("/tmp/p2.txt", "wb");
-	// branchLinkDestCount.print(f, TJITPerfHitCounter::kStyleMostHit|TJITPerfHitCounter::kStyleHex, mSymbolList, 1000);
-	// fclose(f);
-#endif
 }
 
 // -------------------------------------------------------------------------- //

@@ -15,6 +15,6 @@ list ( APPEND common_sources
 	Emulator/JIT/TJITCache.h
 	Emulator/JIT/TJITPage.cpp
 	Emulator/JIT/TJITPage.h
-	Emulator/JIT/TJITPerformance.cpp
-	Emulator/JIT/TJITPerformance.h
+	Emulator/JIT/TJITStatistics.cpp
+	Emulator/JIT/TJITStatistics.h
 )

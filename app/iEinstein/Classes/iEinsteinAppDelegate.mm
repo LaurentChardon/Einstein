@@ -24,7 +24,7 @@
 #import "iEinsteinAppDelegate.h"
 #import "iEinsteinViewController.h"
 
-#include "Emulator/JIT/TJITPerformance.h"
+#include "Emulator/JIT/TJITStatistics.h"
 
 @implementation iEinsteinAppDelegate
 

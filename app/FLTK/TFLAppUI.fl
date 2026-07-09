@@ -1,5 +1,5 @@
 # data file for the Fltk User Interface Designer (fluid)
-version 1.0403
+version 1.0404
 use_FL_COMMAND
 header_name {.h}
 code_name {.cpp}
@@ -66,6 +66,19 @@ Function {CreateApplicationWindow(int x, int y)} {open
           xywh {0 0 100 20} deactivate divider
         }
         MenuItem {} {
+          label {Save Statistics}
+          callback {\#ifdef JIT_ENABLE_STATISTICS
+gJITStatistics.write_all();
+\#endif} selected
+          xywh {4 4 100 20} hide
+          code0 {\#include "Emulator/JIT/TJITStatistics.h"}
+          code3 {// avoid being classified as in include line
+(void)o;
+\#ifdef JIT_ENABLE_STATISTICS
+o->show();
+\#endif}
+        }
+        MenuItem {} {
           label Close
           xywh {0 0 100 20} shortcut 0x410077 deactivate divider
         }
@@ -95,7 +108,7 @@ Function {CreateApplicationWindow(int x, int y)} {open
         }
         MenuItem {} {
           label {Screenshot...}
-          callback {gApp->UserActionSnapScreen();} selected
+          callback {gApp->UserActionSnapScreen();}
           xywh {0 0 100 20} shortcut 0x41006a divider
         }
         MenuItem {} {

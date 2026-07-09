@@ -32,6 +32,7 @@
 
 #include "Emulator/JIT/Generic/TJITGeneric_Macros.h"
 
+#include "Emulator/JIT/TJITStatistics.h"
 #include "Emulator/JIT/Generic/TJITGeneric_BlockDataTransfer.h"
 #include "Emulator/JIT/Generic/TJITGeneric_DataProcessingPSRTransfer.h"
 #include "Emulator/JIT/Generic/TJITGeneric_HalfwordAndSignedDataTransfer.h"
@@ -41,10 +42,6 @@
 #include "Emulator/JIT/Generic/TJITGeneric_SingleDataSwap.h"
 #include "Emulator/JIT/Generic/TJITGeneric_SingleDataTransfer.h"
 #include "Emulator/JIT/Generic/TJITGeneric_Test.h"
-
-#ifdef JIT_PERFORMANCE
-#include "TJITPerformance.h"
-#endif
 
 // -------------------------------------------------------------------------- //
 // Constantes
@@ -130,12 +127,12 @@ TJITGenericPage::PushUnit(KUInt16* ioUnitCrsr, KUIntPtr inUnit)
 	*ioUnitCrsr = theCrsr;
 }
 
-#ifdef JIT_PERFORMANCE
+#ifdef JIT_ENABLE_STATISTICS
 JITInstructionProto(instrCount)
 {
 	KUInt32 pc;
 	POPVALUE(pc);
-	COUNTHIT(branchDestCount, pc)
+	gJITStatistics.hit(pc);
 	EXECUTENEXTUNIT;
 }
 #endif
@@ -150,7 +147,9 @@ TJITGenericPage::Translate(
 	KUInt32 inInstruction,
 	KUInt32 inVAddr)
 {
-#ifdef JIT_PERFORMANCE
+#ifdef JIT_ENABLE_STATISTICS
+	// If statistics are enebaled, we keep track of the PC and call the hit
+	// counter for every instruction executed.
 	PushUnit(ioUnitCrsr, instrCount);
 	PushUnit(ioUnitCrsr, inVAddr);
 #endif

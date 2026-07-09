@@ -27,10 +27,6 @@
 #include <K/Defines/KDefinitions.h>
 #include "Emulator/JIT/TJITPage.h"
 
-#if defined(_MSC_VER) && defined(_DEBUG)
-#include "Emulator/JIT/TJITPerformance.h"
-#endif
-
 class TARMProcessor;
 union JITUnit;
 class TJITGeneric;

@@ -1,8 +1,8 @@
 // ==============================
-// File:			JITPerformance.h
+// File:			JITStatistics.h
 // Project:			Einstein
 //
-// Copyright 2003-2007 by Paul Guyot (pguyot@kallisys.net).
+// Copyright 2003-2026 by Paul Guyot (pguyot@kallisys.net).
 //                     and Matthias Melcher (m.melcher@robowerk.com)
 //
 // This program is free software; you can redistribute it and/or modify
@@ -22,8 +22,32 @@
 // $Id$
 // ==============================
 
-#ifndef _TJITPERFORMANCE_H
-#define _TJITPERFORMANCE_H
+#ifndef EINSTEIN_TJITSTATISTICS_H
+#define EINSTEIN_TJITSTATISTICS_H
+
+// vvv--- configure the macros below before compiling Einstein
+
+// To enable some simple statistics on the JIT, define this macro to 1.
+// This will slow down the JIT a bit, but will give you some insight into
+// the instructions that the JIT executes.
+// #define JIT_ENABLE_STATISTICS 1
+#undef JIT_ENABLE_STATISTICS
+
+// Write all statistics to files in this directory.
+#define JIT_STATISTICS_PATH "/Users/matt/dev/Einstein/Statistics/"
+
+// If defined, count how many times each instruction is executed.
+// This will write an array of 2M uint64_t values to "exec_count.bin" in the statistics directory.
+#define JIT_STATISTIC_EXEC_COUNT 1
+
+// If defined, track the order of execution of instructions.
+// This will write an array of 2M uint32_t values to "exec_order.bin".
+#define JIT_STATISTIC_EXEC_ORDER 1
+
+// ^^^--- end of compile time configuration
+
+#ifdef JIT_ENABLE_STATISTICS
+#define JIT_STATISTIC_EXEC_ORDER 1
 
 #include <K/Defines/KDefinitions.h>
 #include <stdio.h>
@@ -31,76 +55,43 @@
 class TEmulator;
 class TSymbolList;
 
-///
-/// Implement a fast hit counter.
-///
-/// This class is helpful to count any kind of array access. It was written
-/// to count the command executions in the ROM, but can be used for many
-/// other purposes, like hash buffer performance measurments.
-///
-class TJITPerfHitCounter
+// Number of words needed to count hits in ROM
+constexpr size_t k8MBWords = (8 * 1024 * 1024) / 4;
+
+class TJITStatistics
 {
+	TEmulator* mEmulator { nullptr };
+
 public:
-	/// Create a hit counter setup.
-	/// \param first lowest value that will be counted, lower values will be ignored
-	/// \param last highest value that will be counted
-	/// \param step count only values that divide by step; legal values are 1, 2, and 4
-	TJITPerfHitCounter(KUInt32 first, KUInt32 last, KUInt32 step = 1);
+	/// Write all our findings.
+	void write_all();
 
-	/// free all associated resources
-	~TJITPerfHitCounter();
-
-	void SetEmulator(TEmulator* inEmulator);
-
-	/// Count a hit at the given index
+	/// Called for every JIT instruction that is executed.
 	/// \param at index into hit counter array; out-of-bounds indices are safe
 	void hit(KUInt32 at);
 
-	/// Return the number of hits for a given index
-	/// \param at the index of the counter that we want to inspect
-	KUInt64 get_hits(KUInt32 at);
+	/// Reference back to the emulator.
+	/// \param inEmulator pointer to the emulator instance
+	void
+	SetEmulator(TEmulator* inEmulator)
+	{
+		mEmulator = inEmulator;
+	}
 
-	/// Print the collected data to a file
-	/// \param out a destination file that the caller must manage
-	/// \param style one of the output styles defined below
-	/// \param inSymbols optional symbol file used to map hits to symbols
-	void print(FILE* out, KUInt32 style, TSymbolList* inSymbols = NULL, ...);
+#ifdef JIT_STATISTIC_EXEC_COUNT
+	uint64_t mExecCount[k8MBWords] { 0 };
+	void write_exec_count();
+#endif
 
-	enum {
-		kStyleAToB = 0, ///< show all values from a to b; varargs are UInt32 a, UInt32 b
-		kStyleMostHit, ///< show the first n addresses that were hit most often; varargs is UInt32 n
-		kStyleAllHit, ///< show all addresses that were hit, sorted by number of hit; varargs is unused
-		kStyleDontSort, ///< list all addresses that were hit
-		kStyleHex = 0x10000000, ///< show address in 8 byte hex notation instead of decimal
-		kStyleSymbolsOnly = 0x20000000, ///< show only hits for symbols
-		kStyleNonZeroOnly = 0x40000000 ///< print only hits greater than zero
-	};
-
-private:
-	/// Reference to the emulator
-	TEmulator* mEmulator { nullptr };
-
-	KUInt32 mFirst { 0 };
-
-	KUInt32 mSize { 0 };
-
-	KUInt32 mShift { 0 };
-
-	KUInt64* mArray { nullptr };
-
-	/// Print one hit according to the style and optional symbol information
-	/// \param out a destination file that the caller must manage
-	/// \param style one of the output styles defined below
-	/// \param inSymbols symbol file used to map hits to symbols (can be NULL)
-	/// \param addr address to print
-	/// \param count hits
-	void printOneHit(FILE* out, KUInt32 style, TSymbolList* inSymbols, KUInt32 addr, KUInt64 count);
+#ifdef JIT_STATISTIC_EXEC_ORDER
+	uint32_t mExecOrder[k8MBWords] { 0 };
+	uint32_t mExecOrderIndex { 1 };
+	void write_exec_order();
+#endif
 };
 
-extern TJITPerfHitCounter branchDestCount;
-extern TJITPerfHitCounter branchLinkDestCount;
+extern TJITStatistics gJITStatistics;
 
 #endif
-// _JITPERFORMANCE_H
 
-// ==============================
+#endif // EINSTEIN_TJITSTATISTICS_H
