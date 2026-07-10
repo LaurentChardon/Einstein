@@ -491,7 +491,7 @@ TPulseAudioSoundManager::PAStreamWriteQueuedOutput(pa_stream* s, size_t requeste
 {
 	void* outBuffer = NULL;
 	size_t bytesToWrite = requested_bytes;
-	KUIntPtr bytesConsumed;
+	KUIntPtr bytesCopied;
 
 	if (bytesToWrite == 0)
 	{
@@ -517,20 +517,13 @@ TPulseAudioSoundManager::PAStreamWriteQueuedOutput(pa_stream* s, size_t requeste
 
 	if (pa_stream_begin_write(s, &outBuffer, &bytesToWrite) < 0)
 	{
+		if (requestMoreOutput)
+		{
+			RequestOutputInterrupt();
+		}
 		return;
 	}
 	if (outBuffer == NULL || bytesToWrite == 0)
-	{
-		pa_stream_cancel_write(s);
-		return;
-	}
-
-	mDataMutex->Lock();
-	bytesConsumed = mOutputBuffer->Consume(outBuffer, bytesToWrite);
-	KUIntPtr bytesLeft = mOutputBuffer->AvailableBytes();
-	mDataMutex->Unlock();
-
-	if (bytesConsumed == 0)
 	{
 		pa_stream_cancel_write(s);
 		if (requestMoreOutput)
@@ -540,7 +533,33 @@ TPulseAudioSoundManager::PAStreamWriteQueuedOutput(pa_stream* s, size_t requeste
 		return;
 	}
 
-	pa_stream_write(s, outBuffer, bytesConsumed, NULL, 0LL, PA_SEEK_RELATIVE);
+	mDataMutex->Lock();
+	bytesCopied = mOutputBuffer->Peek(outBuffer, bytesToWrite);
+	mDataMutex->Unlock();
+
+	if (bytesCopied == 0)
+	{
+		pa_stream_cancel_write(s);
+		if (requestMoreOutput)
+		{
+			RequestOutputInterrupt();
+		}
+		return;
+	}
+
+	if (pa_stream_write(s, outBuffer, bytesCopied, NULL, 0LL, PA_SEEK_RELATIVE) < 0)
+	{
+		if (requestMoreOutput)
+		{
+			RequestOutputInterrupt();
+		}
+		return;
+	}
+
+	mDataMutex->Lock();
+	mOutputBuffer->Discard(bytesCopied);
+	KUIntPtr bytesLeft = mOutputBuffer->AvailableBytes();
+	mDataMutex->Unlock();
 
 	if (requestMoreOutput && bytesLeft < kNewtonBufferSize)
 	{
