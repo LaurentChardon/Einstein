@@ -26,6 +26,7 @@
 #include "TPulseAudioSoundManager.h"
 
 // ANSI C * POSIX
+#include <algorithm>
 #include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -56,6 +57,12 @@
 // -------------------------------------------------------------------------- //
 TPulseAudioSoundManager::TPulseAudioSoundManager(TLog* inLog /* = nil */) :
 		TBufferedSoundManager(inLog),
+		mPAOperation(nullptr),
+		mPAOperationDescr(nullptr),
+		mOutputStream(nullptr),
+		mPAMainLoop(nullptr),
+		mPAMainLoopAPI(nullptr),
+		mPAContext(nullptr),
 		mOutputBuffer(new TCircleBuffer(
 			kNewtonBufferSizeInFrames * 4 * sizeof(KUInt16))),
 		mDataMutex(new TMutex()),
@@ -238,9 +245,11 @@ TPulseAudioSoundManager::~TPulseAudioSoundManager(void)
 		pa_stream_set_state_callback(mOutputStream, NULL, NULL);
 		// disconnect the stream
 		pa_stream_disconnect(mOutputStream);
+		pa_stream_unref(mOutputStream);
 		if (mPAContext)
 		{
 			pa_context_disconnect(mPAContext);
+			pa_context_unref(mPAContext);
 		}
 		if (mPAMainLoop)
 		{
@@ -494,7 +503,7 @@ TPulseAudioSoundManager::PAStreamWriteQueuedOutput(pa_stream* s, size_t requeste
 	}
 
 	mDataMutex->Lock();
-	bytesToWrite = MIN(mOutputBuffer->AvailableBytes(), bytesToWrite);
+	bytesToWrite = std::min<size_t>(mOutputBuffer->AvailableBytes(), bytesToWrite);
 	mDataMutex->Unlock();
 
 	if (bytesToWrite == 0)
